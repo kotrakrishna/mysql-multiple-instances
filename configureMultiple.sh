@@ -99,7 +99,7 @@ sudo chown -R mysql:mysql $dataDir/mysql$PORT
 
 # Get mysql configuration file
 sudo cp ./mysql/my3306.cnf /etc/mysql/my$PORT.cnf
-sudo sed -i 's/3306/$PORT/g' /etc/mysql/my$PORT.cnf
+sudo sed -i "s/3306/$PORT/g" /etc/mysql/my$PORT.cnf
 
 # install MySQL files into the new data dirs
 sudo mysql_install_db --user=mysql --basedir=/usr --datadir=$dataDir/mysql$PORT --defaults-file=/etc/mysql/my$PORT.cnf
@@ -114,10 +114,10 @@ echo "GRANT ALL PRIVILEGES ON *.* TO '$debianUser'@'127.0.0.1' IDENTIFIED BY '$d
 
 # Get script to start/stop
 sudo cp ./init.d/mysql3306 /etc/init.d/mysql$PORT 
-sudo sed -i 's/3306/$PORT/g' /etc/init.d/mysql$PORT
+sudo sed -i "s/3306/$PORT/g" /etc/init.d/mysql$PORT
 
-sudo sed -i 's/3306/$PORT/g' /etc/init.d/mysql$PORT
+sudo sed -i "s/3306/$PORT/g" /etc/init.d/mysql$PORT
 sudo update-rc.d mysql$PORT defaults
 
 # Optionally set password
-/usr/bin/mysqladmin -u root -h 127.0.0.1 --port=$PORT password '$password'
+/usr/bin/mysqladmin -u root -h 127.0.0.1 --port=$PORT password "$password"
