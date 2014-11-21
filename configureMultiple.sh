@@ -1,76 +1,122 @@
+#!/bin/bash
 
-sudo mkdir -p /var/log/mysql/mysql3306
-sudo mkdir -p /var/log/mysql/mysql3307
-sudo mkdir -p /var/log/mysql/mysql3308
-sudo mkdir -p /var/log/mysql/mysql3309
+#
+# Output stuff in cyan
+#
+message_info() {
+    if [ "$1" == "-n" ]; then arg="n"; shift; fi
+    echo -${arg}e "\033[0;36m$1\033[0m"
+}
 
-sudo touch /var/log/mysql/mysql3306/mysql.log
-sudo touch /var/log/mysql/mysql3307/mysql.log
-sudo touch /var/log/mysql/mysql3308/mysql.log
-sudo touch /var/log/mysql/mysql3309/mysql.log
+#
+# Output stuff in white color with a red background
+#
+message_error() {
+    if [ "$1" == "-n" ]; then arg="n"; shift; fi
+    echo -${arg}e "\033[0;41m$1\033[0m"
+}
+
+#
+#   Print help text
+#
+printHelp() {
+    me=`basename $0`
+    echo -e "Usage: ./${me} PORT [--password=OPTIONAL-PASSWORD|--help]\n"
+
+    echo "The script runs commands to setup a new db server at the specified port. It can optionally
+    set the specified password for root user
+
+    It create server with
+    logs at /var/log/mysql/ directory
+    data at /database/ directory
+    "
+
+    echo "Required arguments are:
+    PORT         Port at which mysql db server needs to run
+    "
+
+    echo "Available options are:
+    -h --help    Print this help message
+    --log-dir    Log directory for the mysql server
+    --data-dir   Data directory for the mysql server
+    --password   Password that needs to be set to the root user
+    "
+
+    exit 0;
+}
+
+if [ -z $1 ]; then
+    message_error "Port not specified. Exiting"
+    exit 1;
+fi
+PORT=$1
+
+# Defaults
+logDir="/var/log/mysql"
+dataDir="/database"
+
+while [[ $# -gt 0 ]] ;
+do
+    opt=$(echo $1 | cut -d '=' -f1); # grab the first value. '--secret-key' out of "--secret-key=test"
+    val=$(echo $1 | cut -d '=' -f2); # grab the second value. 'test' out of "--secret-key=test"
+    shift;
+    case "$opt" in
+        "--help")
+            printHelp
+            ;;
+        "-h")
+            printHelp
+            ;;
+        "--log-dir")
+            logDir=$val
+            ;;
+        "--data-dir")
+            dataDir=$val
+            ;;
+        "--password")
+            password=$val
+            ;;
+   esac
+done
 
 
-sudo touch /var/log/mysql/mysql3306/error.log
-sudo touch /var/log/mysql/mysql3307/error.log
-sudo touch /var/log/mysql/mysql3308/error.log
-sudo touch /var/log/mysql/mysql3309/error.log
-
-sudo touch /var/log/mysql/mysql3306/mysql-slow.log
-sudo touch /var/log/mysql/mysql3307/mysql-slow.log
-sudo touch /var/log/mysql/mysql3308/mysql-slow.log
-sudo touch /var/log/mysql/mysql3309/mysql-slow.log
 
 
-sudo chown -R mysql:mysql /var/log/mysql
+# SET Log folders and permissions
+sudo mkdir -p $logDir/mysql$PORT
+sudo touch $logDir/mysql$PORT/mysql.log
+sudo touch $logDir/mysql$PORT/error.log
+sudo touch $logDir/mysql$PORT/mysql-slow.log
+sudo chown -R mysql:mysql $logDir
 
-sudo setfacl -R -m u:mysql:rwX -m u:`whoami`:rwX /var/log/mysql
-sudo setfacl -dR -m u:mysql:rwX -m u:`whoami`:rwX /var/log/mysql
+sudo setfacl -R -m u:mysql:rwX -m u:`whoami`:rwX $logDir
+sudo setfacl -dR -m u:mysql:rwX -m u:`whoami`:rwX $logDir
 
-#sudo cp /etc/mysql/my.cnf /etc/mysql/my3306.cnf
-## Edit all the ports, sockets, logs dirs, data dirs
-sudo sed -i 's/3306/3307/g' my3307.cnf 
-sudo sed -i 's/3306/3308/g' my3308.cnf 
-sudo sed -i 's/3306/3309/g' my3309.cnf
+# SET Database folders and permissions
+sudo mkdir -p $dataDir/mysql$PORT
+sudo chown -R mysql:mysql $dataDir/mysql$PORT
 
-sudo mkdir -p /databases/mysql3306
-sudo mkdir -p /databases/mysql3307
-sudo mkdir -p /databases/mysql3308
-sudo mkdir -p /databases/mysql3309
+# Get mysql configuration file
+sudo wget -O /etc/mysql/mysql$PORT.cnf https://raw.githubusercontent.com/kotrakrishna/mysql-multiple-instances/master/mysql/mysql3306.cnf
+sudo sed -i 's/3306/$PORT/g' /etc/mysql/mysql$PORT.cnf
 
-sudo chown -R mysql:mysql /databases/mysql3306
-sudo chown -R mysql:mysql /databases/mysql3307
-sudo chown -R mysql:mysql /databases/mysql3308
-sudo chown -R mysql:mysql /databases/mysql3309
+# install MySQL files into the new data dirs
+sudo mysql_install_db --user=mysql --basedir=/usr --datadir=$dataDir/mysql$PORT --defaults-file=/etc/mysql/my$PORT.cnf
 
-sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/database/mysql3306 --defaults-file=/etc/mysql/my3306.cnf
-sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/database/mysql3307 --defaults-file=/etc/mysql/my3307.cnf
-sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/database/mysql3308 --defaults-file=/etc/mysql/my3308.cnf
-sudo mysql_install_db --user=mysql --basedir=/usr --datadir=/database/mysql3309 --defaults-file=/etc/mysql/my3309.cnf
+#start mysql
+sudo -b mysqld_safe --defaults-file=/etc/mysql/my$PORT.cnf --user=mysql
 
-#start
-sudo -b mysqld_safe --defaults-file=/etc/mysql/my3306.cnf --user=mysql
-sudo -b mysqld_safe --defaults-file=/etc/mysql/my3307.cnf --user=mysql
-sudo -b mysqld_safe --defaults-file=/etc/mysql/my3308.cnf --user=mysql
-sudo -b mysqld_safe --defaults-file=/etc/mysql/my3309.cnf --user=mysql
-
+# Create debian user and passoword in the new db for maintainance
 debianUser=$(sudo cat /etc/mysql/debian.cnf | grep "user" | tail -1| cut -d'=' -f2 | sed 's/ //g')
 debianPass=$(sudo cat /etc/mysql/debian.cnf | grep "password" | tail -1| cut -d'=' -f2 | sed 's/ //g')
-echo "GRANT ALL PRIVILEGES ON *.* TO '$debianUser'@'127.0.0.1' IDENTIFIED BY '$debianUser'" | mysql -uroot -h127.0.0.1 --port=3306 -pbb321
-echo "GRANT ALL PRIVILEGES ON *.* TO '$debianUser'@'127.0.0.1' IDENTIFIED BY '$debianPass'" | mysql -uroot -h127.0.0.1 --port=3307 -pbb321
-echo "GRANT ALL PRIVILEGES ON *.* TO '$debianUser'@'127.0.0.1' IDENTIFIED BY '$debianPass'" | mysql -uroot -h127.0.0.1 --port=3308 -pbb321
-echo "GRANT ALL PRIVILEGES ON *.* TO '$debianUser'@'127.0.0.1' IDENTIFIED BY '$debianPass'" | mysql -uroot -h127.0.0.1 --port=3309 -pbb321
+echo "GRANT ALL PRIVILEGES ON *.* TO '$debianUser'@'127.0.0.1' IDENTIFIED BY '$debianPass'" | mysql -uroot -h127.0.0.1 --port=$PORT
 
-/usr/bin/mysqladmin -u root -h 127.0.0.1 --port=3306 password 'bb321'
-/usr/bin/mysqladmin -u root -h 127.0.0.1 --port=3307 password 'bb321'
-/usr/bin/mysqladmin -u root -h 127.0.0.1 --port=3308 password 'bb321'
-/usr/bin/mysqladmin -u root -h 127.0.0.1 --port=3309 password 'bb321'
+# Get script to start/stop
+sudo wget -O /etc/init.d/mysql$PORT https://raw.githubusercontent.com/kotrakrishna/mysql-multiple-instances/master/init.d/mysql3306
+sudo sed -i 's/3306/$PORT/g' /etc/init.d/mysql$PORT
 
+sudo sed -i 's/3306/$PORT/g' /etc/init.d/mysql$PORT
+sudo update-rc.d mysql$PORT defaults
 
-sudo sed -i 's/3306/3307/g' mysql3307 
-sudo sed -i 's/3306/3308/g' mysql3308 
-sudo sed -i 's/3306/3309/g' mysql3309
-
-sudo update-rc.d mysql3306 defaults
-sudo update-rc.d mysql3307 defaults
-sudo update-rc.d mysql3308 defaults
-sudo update-rc.d mysql3309 defaults
+# Optionally set password
+/usr/bin/mysqladmin -u root -h 127.0.0.1 --port=$PORT password '$password'
