@@ -80,7 +80,8 @@ do
 done
 
 
-
+# cd to the directory containing supervisor configurations
+cd "$(dirname "$0")"
 
 # SET Log folders and permissions
 sudo mkdir -p $logDir/mysql$PORT
@@ -97,8 +98,8 @@ sudo mkdir -p $dataDir/mysql$PORT
 sudo chown -R mysql:mysql $dataDir/mysql$PORT
 
 # Get mysql configuration file
-sudo wget -O /etc/mysql/mysql$PORT.cnf https://raw.githubusercontent.com/kotrakrishna/mysql-multiple-instances/master/mysql/mysql3306.cnf
-sudo sed -i 's/3306/$PORT/g' /etc/mysql/mysql$PORT.cnf
+sudo cp ./mysql/my3306.cnf /etc/mysql/my$PORT.cnf
+sudo sed -i 's/3306/$PORT/g' /etc/mysql/my$PORT.cnf
 
 # install MySQL files into the new data dirs
 sudo mysql_install_db --user=mysql --basedir=/usr --datadir=$dataDir/mysql$PORT --defaults-file=/etc/mysql/my$PORT.cnf
@@ -112,7 +113,7 @@ debianPass=$(sudo cat /etc/mysql/debian.cnf | grep "password" | tail -1| cut -d'
 echo "GRANT ALL PRIVILEGES ON *.* TO '$debianUser'@'127.0.0.1' IDENTIFIED BY '$debianPass'" | mysql -uroot -h127.0.0.1 --port=$PORT
 
 # Get script to start/stop
-sudo wget -O /etc/init.d/mysql$PORT https://raw.githubusercontent.com/kotrakrishna/mysql-multiple-instances/master/init.d/mysql3306
+sudo cp ./init.d/mysql3306 /etc/init.d/mysql$PORT 
 sudo sed -i 's/3306/$PORT/g' /etc/init.d/mysql$PORT
 
 sudo sed -i 's/3306/$PORT/g' /etc/init.d/mysql$PORT
