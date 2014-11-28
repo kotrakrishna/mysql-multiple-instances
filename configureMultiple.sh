@@ -135,7 +135,7 @@ sudo update-rc.d mysql$PORT defaults
 sudo -b mysqld_safe --defaults-file=/etc/mysql/my$PORT.cnf --user=mysql > /dev/null 2>&1
 
 echo "..."
-sleep 5;
+sleep 20;
 
 # Create debian user and passoword in the new db for maintainance
 debianUser=$(sudo cat /etc/mysql/debian.cnf | grep "user" | tail -1| cut -d'=' -f2 | sed 's/ //g')
