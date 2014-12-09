@@ -24,7 +24,6 @@ Step 3:
 ```
 # Exit from root shell
 exit
-# Run the config script
 ```
 Script to create multiple mysql instances on same machine running at different ports
 ```
