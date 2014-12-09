@@ -1,0 +1,6 @@
+/database/mysql3306/ r,
+/database/mysql3306/** rwk,
+/var/run/mysqld/mysqld3306.pid rw,
+/var/run/mysqld/mysqld3306.sock w,
+/run/mysqld/mysqld3306.pid rw,
+/run/mysqld/mysqld3306.sock w,
