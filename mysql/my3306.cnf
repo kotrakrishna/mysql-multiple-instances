@@ -48,7 +48,7 @@ tmpdir		= /tmp
 skip-external-locking
 default-storage-engine = innodb
 innodb_lock_wait_timeout=120
-innodb_log_file_size = 128M
+innodb_log_file_size = 256M
 
 #
 # Instead of skip-networking the default is now to listen only on
